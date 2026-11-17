@@ -1,0 +1,1742 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KERUCUT INTERAKTIF: Jelajahi, Simulasikan, dan Kuasai Matematika</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <!-- html2pdf for Certificate -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- Marked for AI Chat rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        heading: ['Poppins', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#4F46E5', // Indigo 600
+                        secondary: '#9333EA', // Purple 600
+                        darkbg: '#0F172A', // Slate 900
+                        darkcard: '#1E293B', // Slate 800
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Styles & Animations */
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, h4, h5, h6, .font-heading { font-family: 'Poppins', sans-serif; }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .dark .glass-panel {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        .dark ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #c7d2fe; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #4f46e5; }
+        ::-webkit-scrollbar-thumb:hover { background: #a5b4fc; }
+
+        canvas { display: block; outline: none; }
+        .canvas-container { position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 0.5rem; }
+        
+        /* 3D Labels */
+        .label3d { position: absolute; color: white; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 4px; font-size: 12px; pointer-events: none; transform: translate(-50%, -50%); transition: all 0.1s; }
+        
+        /* Jaring-jaring animation */
+        .net-container { position: relative; width: 200px; height: 200px; margin: 0 auto; perspective: 600px; }
+        .net-base { position: absolute; bottom: 10%; left: 50%; transform: translateX(-50%); width: 100px; height: 100px; background: #60a5fa; border-radius: 50%; transition: all 1s; opacity: 0.8;}
+        .net-mantle { position: absolute; top: 10%; left: 50%; transform: translateX(-50%) rotate(0deg); transform-origin: bottom center; width: 0; height: 0; border-left: 50px solid transparent; border-right: 50px solid transparent; border-bottom: 120px solid #818cf8; transition: all 1s; opacity: 0.8;}
+        .animating .net-mantle {
+            border-left: 100px solid transparent; border-right: 100px solid transparent; border-bottom: 150px solid transparent; /* Hide triangle */
+            background: conic-gradient(from 180deg at 50% 100%, transparent 0deg, transparent 60deg, #818cf8 60deg, #818cf8 300deg, transparent 300deg, transparent 360deg);
+            width: 200px; height: 150px; transform: translateX(-50%) translateY(20px); border-radius: 50% 50% 0 0;
+        }
+
+        .markdown-body ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+        .markdown-body ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; }
+        .markdown-body strong { font-weight: bold; }
+        .markdown-body p { margin-bottom: 0.75rem; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-darkbg dark:text-slate-100 transition-colors duration-300">
+
+    <!-- Sound Synthesizer (Web Audio API) -->
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSuccessSound() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+            osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1); // A5
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.05);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.5);
+        }
+        let bgmOsc = null;
+        let bgmGain = null;
+        let isMusicPlaying = false;
+        function toggleBGM() {
+            if(isMusicPlaying) {
+                bgmGain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+                setTimeout(() => { bgmOsc.stop(); bgmOsc.disconnect(); isMusicPlaying = false; }, 500);
+            } else {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                bgmOsc = audioCtx.createOscillator();
+                bgmGain = audioCtx.createGain();
+                bgmOsc.type = 'triangle';
+                bgmGain.gain.setValueAtTime(0, audioCtx.currentTime);
+                bgmGain.gain.linearRampToValueAtTime(0.02, audioCtx.currentTime + 2); // Very soft
+                
+                // Simple melody loop logic could go here, but a drone is less distracting for learning
+                bgmOsc.frequency.setValueAtTime(220, audioCtx.currentTime); // A3 drone
+                
+                bgmOsc.connect(bgmGain);
+                bgmGain.connect(audioCtx.destination);
+                bgmOsc.start();
+                isMusicPlaying = true;
+            }
+            document.getElementById('musicIcon').className = isMusicPlaying ? 'fas fa-volume-up' : 'fas fa-volume-mute';
+        }
+    </script>
+
+    <!-- UI Overlay (Toasts, Modals) -->
+    <div id="toast" class="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg transform transition-transform duration-300 translate-x-full z-50 flex items-center space-x-2">
+        <i class="fas fa-check-circle"></i>
+        <span id="toastMsg">Berhasil!</span>
+    </div>
+
+    <!-- MAIN APP LAYOUT -->
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="w-64 bg-white dark:bg-darkcard shadow-xl flex-shrink-0 flex flex-col h-full transform -translate-x-full md:translate-x-0 transition-transform duration-300 absolute md:relative z-40">
+            <div class="p-6 border-b dark:border-slate-700 flex justify-between items-center bg-gradient-to-r from-primary to-secondary text-white">
+                <h2 class="text-xl font-heading font-bold leading-tight">KERUCUT<br>INTERAKTIF</h2>
+                <button onclick="toggleSidebar()" class="md:hidden text-white"><i class="fas fa-times text-2xl"></i></button>
+            </div>
+            
+            <div class="p-4 flex-1 overflow-y-auto">
+                <div class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Menu Pembelajaran</div>
+                <nav class="space-y-1" id="navMenu">
+                    <!-- Nav items generated via JS -->
+                </nav>
+            </div>
+            
+            <div class="p-4 border-t dark:border-slate-700 text-xs text-center text-slate-500 dark:text-slate-400">
+                <div class="mb-2">
+                    <span class="block">Progress Belajar:</span>
+                    <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 mt-1">
+                        <div id="sidebarProgress" class="bg-green-500 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+                Pengembang: <br><span class="font-semibold">I Made Edy Bangkit S.</span><br>Matematika SMP Kelas IX
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col h-full relative overflow-hidden bg-slate-100 dark:bg-slate-900">
+            <!-- Header -->
+            <header class="h-16 bg-white dark:bg-darkcard shadow-sm flex items-center justify-between px-4 z-30">
+                <div class="flex items-center">
+                    <button onclick="toggleSidebar()" class="mr-4 text-slate-500 hover:text-primary md:hidden">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <h2 id="headerTitle" class="text-lg font-heading font-semibold text-slate-800 dark:text-white">Beranda</h2>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="toggleBGM()" class="text-slate-500 hover:text-primary transition" title="Toggle Musik Latar">
+                        <i id="musicIcon" class="fas fa-volume-mute text-lg"></i>
+                    </button>
+                    <button onclick="toggleTheme()" class="text-slate-500 hover:text-primary transition" title="Toggle Tema Gelap/Terang">
+                        <i id="themeIcon" class="fas fa-moon text-lg"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Scrollable Content Container -->
+            <div id="contentContainer" class="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth relative">
+                
+                <!-- ==================== VIEWS ==================== -->
+                
+                <!-- VIEW: Landing (Home) -->
+                <section id="view-landing" class="view-section hidden h-full flex flex-col justify-center items-center text-center fade-in">
+                    <div class="absolute inset-0 z-0 opacity-20 pointer-events-none" style="background-image: radial-gradient(circle at center, #4F46E5 0%, transparent 70%);"></div>
+                    <div class="z-10 max-w-3xl glass-panel p-8 md:p-12 rounded-2xl shadow-2xl border-t-4 border-t-secondary">
+                        <div class="w-24 h-24 mx-auto bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center mb-6 shadow-lg transform hover:rotate-12 transition">
+                            <i class="fas fa-cone text-4xl text-white"></i>
+                        </div>
+                        <h1 class="text-4xl md:text-5xl font-heading font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary mb-4">
+                            KERUCUT INTERAKTIF
+                        </h1>
+                        <h2 class="text-xl md:text-2xl text-slate-600 dark:text-slate-300 mb-8 font-light">
+                            Mari Mengenal, Memahami, dan Menjelajahi Bangun Ruang Kerucut
+                        </h2>
+                        
+                        <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+                            <button onclick="navigateTo('dashboard')" class="bg-primary hover:bg-indigo-700 text-white px-8 py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition transform hover:-translate-y-1">
+                                <i class="fas fa-play mr-2"></i> MULAI BELAJAR
+                            </button>
+                            <button onclick="showModal('petunjukModal')" class="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 px-8 py-3 rounded-full font-semibold shadow transition">
+                                <i class="fas fa-info-circle mr-2"></i> PETUNJUK
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: Dashboard -->
+                <section id="view-dashboard" class="view-section hidden fade-in">
+                    <div class="mb-8 bg-gradient-to-r from-primary to-secondary rounded-xl p-6 text-white shadow-lg flex flex-col md:flex-row items-center justify-between">
+                        <div>
+                            <h2 class="text-2xl font-bold font-heading mb-2">Selamat Datang di Pembelajaran!</h2>
+                            <p class="opacity-90">Pilih menu di bawah ini untuk mulai menjelajahi materi Kerucut.</p>
+                        </div>
+                        <div class="mt-4 md:mt-0 bg-white/20 p-4 rounded-lg backdrop-blur-sm text-center min-w-[150px]">
+                            <div class="text-sm uppercase tracking-wide opacity-80">Progres</div>
+                            <div class="text-3xl font-bold" id="dashProgressTxt">0%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="dashboardGrid">
+                        <!-- Cards generated by JS -->
+                    </div>
+                </section>
+
+                <!-- VIEW: Tujuan -->
+                <section id="view-tujuan" class="view-section hidden fade-in">
+                    <div class="bg-white dark:bg-darkcard rounded-xl shadow-lg p-8">
+                        <div class="flex items-center mb-6 text-primary">
+                            <i class="fas fa-bullseye text-4xl mr-4"></i>
+                            <h2 class="text-3xl font-heading font-bold text-slate-800 dark:text-white">Tujuan Pembelajaran</h2>
+                        </div>
+                        <p class="text-lg text-slate-600 dark:text-slate-300 mb-6">Setelah mengikuti pembelajaran interaktif ini, kamu diharapkan mampu:</p>
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <div class="flex items-start p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border-l-4 border-blue-500 shadow-sm transition hover:shadow-md">
+                                <div class="bg-blue-100 text-blue-600 rounded-full w-8 h-8 flex items-center justify-center font-bold mr-4 shrink-0">1</div>
+                                <p class="text-slate-700 dark:text-slate-300">Menjelaskan pengertian bangun ruang kerucut.</p>
+                            </div>
+                            <div class="flex items-start p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border-l-4 border-indigo-500 shadow-sm transition hover:shadow-md">
+                                <div class="bg-indigo-100 text-indigo-600 rounded-full w-8 h-8 flex items-center justify-center font-bold mr-4 shrink-0">2</div>
+                                <p class="text-slate-700 dark:text-slate-300">Mengidentifikasi unsur-unsur kerucut.</p>
+                            </div>
+                            <div class="flex items-start p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border-l-4 border-purple-500 shadow-sm transition hover:shadow-md">
+                                <div class="bg-purple-100 text-purple-600 rounded-full w-8 h-8 flex items-center justify-center font-bold mr-4 shrink-0">3</div>
+                                <p class="text-slate-700 dark:text-slate-300">Menjelaskan hubungan jari-jari, tinggi, dan garis pelukis.</p>
+                            </div>
+                            <div class="flex items-start p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border-l-4 border-pink-500 shadow-sm transition hover:shadow-md">
+                                <div class="bg-pink-100 text-pink-600 rounded-full w-8 h-8 flex items-center justify-center font-bold mr-4 shrink-0">4</div>
+                                <p class="text-slate-700 dark:text-slate-300">Menentukan luas permukaan kerucut.</p>
+                            </div>
+                            <div class="flex items-start p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border-l-4 border-red-500 shadow-sm transition hover:shadow-md">
+                                <div class="bg-red-100 text-red-600 rounded-full w-8 h-8 flex items-center justify-center font-bold mr-4 shrink-0">5</div>
+                                <p class="text-slate-700 dark:text-slate-300">Menghitung volume kerucut.</p>
+                            </div>
+                            <div class="flex items-start p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border-l-4 border-orange-500 shadow-sm transition hover:shadow-md">
+                                <div class="bg-orange-100 text-orange-600 rounded-full w-8 h-8 flex items-center justify-center font-bold mr-4 shrink-0">6</div>
+                                <p class="text-slate-700 dark:text-slate-300">Menyelesaikan permasalahan kontekstual kehidupan sehari-hari yang berkaitan dengan kerucut.</p>
+                            </div>
+                        </div>
+                        <div class="mt-8 text-center">
+                            <button onclick="markProgress('tujuan'); navigateTo('materi');" class="bg-primary hover:bg-indigo-700 text-white px-6 py-2 rounded-lg transition shadow">Lanjut ke Materi <i class="fas fa-arrow-right ml-2"></i></button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: Materi -->
+                <section id="view-materi" class="view-section hidden fade-in">
+                    <div class="bg-white dark:bg-darkcard rounded-xl shadow-lg p-6">
+                        <!-- Tab Nav -->
+                        <div class="flex overflow-x-auto space-x-2 border-b dark:border-slate-700 pb-2 mb-6">
+                            <button onclick="switchMateriTab('pengertian')" id="tab-pengertian" class="materi-tab px-4 py-2 rounded-t-lg bg-primary text-white font-semibold whitespace-nowrap">Pengertian</button>
+                            <button onclick="switchMateriTab('unsur')" id="tab-unsur" class="materi-tab px-4 py-2 rounded-t-lg text-slate-500 hover:text-primary dark:text-slate-400 font-semibold whitespace-nowrap">Unsur-Unsur</button>
+                            <button onclick="switchMateriTab('jaring')" id="tab-jaring" class="materi-tab px-4 py-2 rounded-t-lg text-slate-500 hover:text-primary dark:text-slate-400 font-semibold whitespace-nowrap">Jaring-Jaring</button>
+                            <button onclick="switchMateriTab('rumus')" id="tab-rumus" class="materi-tab px-4 py-2 rounded-t-lg text-slate-500 hover:text-primary dark:text-slate-400 font-semibold whitespace-nowrap">Rumus</button>
+                        </div>
+
+                        <!-- Tab Contents -->
+                        <div id="materi-pengertian" class="materi-content animate-fade-in">
+                            <h3 class="text-2xl font-bold mb-4">Pengertian Kerucut</h3>
+                            <p class="mb-4 text-lg leading-relaxed">Kerucut merupakan bangun ruang sisi lengkung yang memiliki <strong>satu alas berbentuk lingkaran</strong> dan <strong>satu sisi lengkung</strong> yang disebut selimut kerucut. Kerucut memiliki satu titik puncak.</p>
+                            <h4 class="font-bold text-lg mb-4 text-primary">Benda Berbentuk Kerucut di Sekitar Kita:</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                                <div class="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700"><i class="fas fa-hat-wizard text-3xl text-purple-500 mb-2"></i><br>Topi Ulang Tahun</div>
+                                <div class="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700"><i class="fas fa-ice-cream text-3xl text-pink-500 mb-2"></i><br>Cone Es Krim</div>
+                                <div class="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700"><i class="fas fa-filter text-3xl text-blue-500 mb-2"></i><br>Corong</div>
+                                <div class="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700"><i class="fas fa-traffic-cone text-3xl text-orange-500 mb-2"></i><br>Kerucut Lalu Lintas</div>
+                            </div>
+                        </div>
+
+                        <div id="materi-unsur" class="materi-content hidden animate-fade-in">
+                            <h3 class="text-2xl font-bold mb-4">Unsur-Unsur Kerucut</h3>
+                            <div class="flex flex-col md:flex-row gap-6 items-center">
+                                <div class="w-full md:w-1/2 h-64 bg-slate-100 dark:bg-slate-800 rounded-lg relative flex items-center justify-center p-4">
+                                    <!-- Simple CSS/SVG representation of Cone elements -->
+                                    <svg viewBox="0 0 200 200" class="w-full h-full drop-shadow-md">
+                                        <ellipse cx="100" cy="160" rx="60" ry="20" fill="#a5b4fc" stroke="#4f46e5" stroke-width="2"/>
+                                        <path d="M40 160 L100 20 L160 160" fill="rgba(199, 210, 254, 0.5)" stroke="#4f46e5" stroke-width="2"/>
+                                        <line x1="100" y1="20" x2="100" y2="160" stroke="#ef4444" stroke-width="2" stroke-dasharray="4"/>
+                                        <line x1="100" y1="160" x2="160" y2="160" stroke="#22c55e" stroke-width="2"/>
+                                        <!-- Labels -->
+                                        <text x="105" y="100" fill="#ef4444" font-size="12" font-weight="bold">t (tinggi)</text>
+                                        <text x="120" y="155" fill="#22c55e" font-size="12" font-weight="bold">r (jari-jari)</text>
+                                        <text x="140" y="90" fill="#4f46e5" font-size="12" font-weight="bold">s (garis pelukis)</text>
+                                        <circle cx="100" cy="20" r="4" fill="#000" />
+                                        <text x="100" y="10" fill="#000" font-size="12" text-anchor="middle" font-weight="bold">Titik Puncak</text>
+                                    </svg>
+                                </div>
+                                <div class="w-full md:w-1/2">
+                                    <ul class="space-y-3">
+                                        <li class="flex items-start"><i class="fas fa-circle text-[8px] text-primary mt-2 mr-2"></i><span><strong>Titik Puncak:</strong> Titik tertinggi kerucut.</span></li>
+                                        <li class="flex items-start"><i class="fas fa-circle text-[8px] text-primary mt-2 mr-2"></i><span><strong>Alas Kerucut:</strong> Sisi bagian bawah yang berbentuk lingkaran.</span></li>
+                                        <li class="flex items-start"><i class="fas fa-circle text-[8px] text-primary mt-2 mr-2"></i><span><strong>Selimut Kerucut:</strong> Sisi lengkung yang menghubungkan alas dan titik puncak.</span></li>
+                                        <li class="flex items-start"><i class="fas fa-circle text-[8px] text-green-500 mt-2 mr-2"></i><span><strong>Jari-jari (r):</strong> Jarak dari titik pusat alas ke tepi lingkaran.</span></li>
+                                        <li class="flex items-start"><i class="fas fa-circle text-[8px] text-red-500 mt-2 mr-2"></i><span><strong>Tinggi (t):</strong> Jarak tegak lurus dari titik puncak ke pusat alas.</span></li>
+                                        <li class="flex items-start"><i class="fas fa-circle text-[8px] text-indigo-500 mt-2 mr-2"></i><span><strong>Garis Pelukis (s):</strong> Garis lurus yang menghubungkan titik puncak dengan titik pada keliling alas.</span></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="materi-jaring" class="materi-content hidden animate-fade-in text-center">
+                            <h3 class="text-2xl font-bold mb-4">Jaring-Jaring Kerucut</h3>
+                            <p class="mb-6">Jika sebuah kerucut dipotong sepanjang garis pelukis dan alasnya, akan terbentuk jaring-jaring yang terdiri dari <strong>satu lingkaran</strong> (alas) dan <strong>satu juring lingkaran</strong> (selimut).</p>
+                            
+                            <div class="h-64 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center mb-6 overflow-hidden">
+                                <div id="netAnimContainer" class="net-container">
+                                    <div class="net-mantle"></div>
+                                    <div class="net-base"></div>
+                                </div>
+                            </div>
+                            
+                            <button onclick="toggleNetAnim()" id="btnNetAnim" class="bg-secondary hover:bg-purple-700 text-white px-6 py-2 rounded-full font-bold shadow transition"><i class="fas fa-magic mr-2"></i> ANIMASIKAN JARING-JARING</button>
+                        </div>
+
+                        <div id="materi-rumus" class="materi-content hidden animate-fade-in">
+                            <h3 class="text-2xl font-bold mb-4">Rumus-Rumus Kerucut</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- Teorema Pythagoras -->
+                                <div class="bg-indigo-50 dark:bg-slate-800 border-l-4 border-indigo-500 p-4 rounded-r-lg">
+                                    <h4 class="font-bold text-indigo-700 dark:text-indigo-400 mb-2"><i class="fas fa-ruler-triangle mr-2"></i>Hubungan r, t, dan s (Pythagoras)</h4>
+                                    <div class="text-xl font-mono text-center my-2 bg-white dark:bg-slate-700 p-2 rounded shadow-inner">s = &radic;(r&sup2; + t&sup2;)</div>
+                                    <p class="text-sm text-slate-600 dark:text-slate-400">s: garis pelukis, r: jari-jari, t: tinggi</p>
+                                </div>
+                                <!-- Luas -->
+                                <div class="bg-green-50 dark:bg-slate-800 border-l-4 border-green-500 p-4 rounded-r-lg">
+                                    <h4 class="font-bold text-green-700 dark:text-green-400 mb-2"><i class="fas fa-layer-group mr-2"></i>Luas Permukaan</h4>
+                                    <div class="text-sm">Luas Alas (La) = &pi;r&sup2;</div>
+                                    <div class="text-sm">Luas Selimut (Ls) = &pi;rs</div>
+                                    <div class="text-xl font-mono text-center my-2 bg-white dark:bg-slate-700 p-2 rounded shadow-inner">Lp = &pi;r(r + s)</div>
+                                    <p class="text-sm text-slate-600 dark:text-slate-400">&pi; &asymp; 3.14 atau 22/7</p>
+                                </div>
+                                <!-- Volume -->
+                                <div class="bg-orange-50 dark:bg-slate-800 border-l-4 border-orange-500 p-4 rounded-r-lg md:col-span-2">
+                                    <h4 class="font-bold text-orange-700 dark:text-orange-400 mb-2"><i class="fas fa-cube mr-2"></i>Volume</h4>
+                                    <p class="mb-2">Volume kerucut adalah sepertiga dari volume tabung dengan jari-jari dan tinggi yang sama.</p>
+                                    <div class="text-2xl font-mono text-center my-2 bg-white dark:bg-slate-700 p-4 rounded shadow-inner font-bold text-primary">V = &frac13; &times; &pi;r&sup2;t</div>
+                                </div>
+                            </div>
+                            <div class="mt-6 text-center">
+                                <button onclick="markProgress('materi'); navigateTo('eksplorasi');" class="bg-primary hover:bg-indigo-700 text-white px-6 py-2 rounded-lg transition shadow">Lanjut ke Eksplorasi 3D <i class="fas fa-arrow-right ml-2"></i></button>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+                <!-- VIEW: Eksplorasi 3D -->
+                <section id="view-eksplorasi" class="view-section hidden h-full flex flex-col fade-in">
+                    <div class="bg-white dark:bg-darkcard rounded-xl shadow-lg p-4 flex-1 flex flex-col md:flex-row gap-4">
+                        <!-- Canvas Area -->
+                        <div class="flex-1 bg-slate-900 rounded-lg relative overflow-hidden" id="exploreCanvasContainer">
+                            <canvas id="exploreCanvas" class="w-full h-full cursor-move"></canvas>
+                            <!-- HTML Overlay for Labels -->
+                            <div id="label-t-exp" class="label3d hidden">Tinggi (t)</div>
+                            <div id="label-r-exp" class="label3d hidden">Jari-jari (r)</div>
+                            <div id="label-s-exp" class="label3d hidden">Garis Pelukis (s)</div>
+                            <div id="label-p-exp" class="label3d hidden">Titik Puncak</div>
+                            
+                            <div class="absolute bottom-2 left-2 text-white/50 text-xs pointer-events-none"><i class="fas fa-hand-pointer mr-1"></i>Geser untuk memutar, Scroll untuk zoom</div>
+                        </div>
+                        
+                        <!-- Control Panel -->
+                        <div class="w-full md:w-64 bg-slate-50 dark:bg-slate-800 p-4 rounded-lg flex flex-col gap-4">
+                            <h3 class="font-bold text-lg border-b pb-2 dark:border-slate-700">Kontrol Tampilan</h3>
+                            
+                            <div class="space-y-2">
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="checkbox" id="cbShowLines" checked class="form-checkbox text-primary rounded h-4 w-4" onchange="expController.updateVisibility()">
+                                    <span>Tampilkan Garis & Label</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer pl-4">
+                                    <input type="checkbox" id="cbTinggi" checked class="form-checkbox text-red-500 rounded h-4 w-4" onchange="expController.updateVisibility()">
+                                    <span class="text-red-500 dark:text-red-400">Tinggi (t)</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer pl-4">
+                                    <input type="checkbox" id="cbJari" checked class="form-checkbox text-green-500 rounded h-4 w-4" onchange="expController.updateVisibility()">
+                                    <span class="text-green-500 dark:text-green-400">Jari-jari (r)</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer pl-4">
+                                    <input type="checkbox" id="cbPelukis" checked class="form-checkbox text-blue-500 rounded h-4 w-4" onchange="expController.updateVisibility()">
+                                    <span class="text-blue-500 dark:text-blue-400">Garis Pelukis (s)</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer pl-4">
+                                    <input type="checkbox" id="cbPuncak" checked class="form-checkbox text-yellow-500 rounded h-4 w-4" onchange="expController.updateVisibility()">
+                                    <span class="text-yellow-600 dark:text-yellow-400">Titik Puncak</span>
+                                </label>
+                            </div>
+                            
+                            <hr class="dark:border-slate-700">
+                            
+                            <div class="flex flex-col gap-2 mt-auto">
+                                <button onclick="expController.toggleAutoRotate()" id="btnAutoRotate" class="bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-200 py-2 rounded hover:bg-indigo-200 transition"><i class="fas fa-sync-alt mr-2"></i>Putar Otomatis</button>
+                                <button onclick="expController.resetView()" class="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 py-2 rounded hover:bg-slate-300 transition"><i class="fas fa-compress-arrows-alt mr-2"></i>Reset Tampilan</button>
+                                <button onclick="markProgress('eksplorasi'); navigateTo('simulasi');" class="bg-primary text-white py-2 rounded shadow hover:bg-indigo-700 transition mt-4">Ke Simulasi <i class="fas fa-arrow-right"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: Simulasi Interaktif -->
+                <section id="view-simulasi" class="view-section hidden fade-in h-full flex flex-col">
+                    <div class="bg-white dark:bg-darkcard rounded-xl shadow-lg flex-1 flex flex-col overflow-hidden">
+                        <!-- Sim Tabs -->
+                        <div class="flex overflow-x-auto bg-slate-100 dark:bg-slate-800 border-b dark:border-slate-700">
+                            <button onclick="switchSimTab(1)" id="btnSim1" class="px-4 py-3 font-semibold text-primary border-b-2 border-primary whitespace-nowrap bg-white dark:bg-darkcard">1. Kalkulator Kerucut</button>
+                            <button onclick="switchSimTab(2)" id="btnSim2" class="px-4 py-3 font-semibold text-slate-500 hover:text-primary whitespace-nowrap">2. Eksplorasi r</button>
+                            <button onclick="switchSimTab(3)" id="btnSim3" class="px-4 py-3 font-semibold text-slate-500 hover:text-primary whitespace-nowrap">3. Eksplorasi t</button>
+                            <button onclick="switchSimTab(4)" id="btnSim4" class="px-4 py-3 font-semibold text-slate-500 hover:text-primary whitespace-nowrap">4. Kerucut vs Tabung</button>
+                        </div>
+                        
+                        <!-- Sim Content Area -->
+                        <div class="flex-1 flex flex-col md:flex-row p-4 gap-4 overflow-y-auto">
+                            
+                            <!-- Sim Canvas -->
+                            <div class="w-full md:w-1/2 lg:w-3/5 bg-slate-900 rounded-lg relative min-h-[300px]" id="simCanvasContainer">
+                                <canvas id="simCanvas" class="w-full h-full"></canvas>
+                            </div>
+                            
+                            <!-- Sim Controls & Output -->
+                            <div class="w-full md:w-1/2 lg:w-2/5 flex flex-col gap-4">
+                                <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg border dark:border-slate-700">
+                                    <h3 class="font-bold mb-4 text-lg" id="simTitle">Simulasi 1: Mengubah Ukuran</h3>
+                                    <p class="text-sm text-slate-500 dark:text-slate-400 mb-4" id="simDesc">Geser slider untuk melihat perubahan bentuk dan nilai secara langsung.</p>
+                                    
+                                    <!-- Inputs -->
+                                    <div class="space-y-4">
+                                        <div id="control-r">
+                                            <div class="flex justify-between mb-1">
+                                                <label class="font-semibold text-sm">Jari-jari (r)</label>
+                                                <span class="font-bold text-primary"><span id="valR">7</span> cm</span>
+                                            </div>
+                                            <input type="range" id="sliderR" min="1" max="20" value="7" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary" oninput="updateSim()">
+                                        </div>
+                                        <div id="control-t">
+                                            <div class="flex justify-between mb-1">
+                                                <label class="font-semibold text-sm">Tinggi (t)</label>
+                                                <span class="font-bold text-primary"><span id="valT">12</span> cm</span>
+                                            </div>
+                                            <input type="range" id="sliderT" min="1" max="30" value="12" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary" oninput="updateSim()">
+                                        </div>
+                                        <div class="flex items-center space-x-4 pt-2">
+                                            <span class="font-semibold text-sm">Nilai &pi; :</span>
+                                            <label class="inline-flex items-center">
+                                                <input type="radio" name="piVal" value="3.14" class="form-radio text-primary" onchange="updateSim()">
+                                                <span class="ml-2 text-sm">3,14</span>
+                                            </label>
+                                            <label class="inline-flex items-center">
+                                                <input type="radio" name="piVal" value="22/7" checked class="form-radio text-primary" onchange="updateSim()">
+                                                <span class="ml-2 text-sm">22/7</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Results Panel -->
+                                <div class="bg-indigo-50 dark:bg-indigo-900/40 p-5 rounded-xl border border-indigo-200 dark:border-indigo-700 flex-1 overflow-y-auto shadow-inner">
+                                    <h4 class="font-bold text-indigo-800 dark:text-indigo-200 mb-4 border-b border-indigo-300 dark:border-indigo-600 pb-2 text-lg"><i class="fas fa-calculator mr-2"></i>Hasil Perhitungan</h4>
+                                    <div class="space-y-3">
+                                        <div class="flex justify-between items-center bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-slate-200 dark:border-slate-600 shadow-sm">
+                                            <div class="text-slate-600 dark:text-slate-400 text-sm font-medium">Garis Pelukis (s)</div>
+                                            <div class="font-bold text-lg font-mono text-slate-800 dark:text-slate-100"><span id="resS">0</span> <span class="text-sm font-sans text-slate-500">cm</span></div>
+                                        </div>
+                                        
+                                        <div class="flex justify-between items-center bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-slate-200 dark:border-slate-600 shadow-sm">
+                                            <div class="text-slate-600 dark:text-slate-400 text-sm font-medium">Luas Alas (La)</div>
+                                            <div class="font-bold text-lg font-mono text-slate-800 dark:text-slate-100"><span id="resLa">0</span> <span class="text-sm font-sans text-slate-500">cm&sup2;</span></div>
+                                        </div>
+                                        
+                                        <div class="flex justify-between items-center bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-slate-200 dark:border-slate-600 shadow-sm">
+                                            <div class="text-slate-600 dark:text-slate-400 text-sm font-medium">Luas Selimut (Ls)</div>
+                                            <div class="font-bold text-lg font-mono text-slate-800 dark:text-slate-100"><span id="resLs">0</span> <span class="text-sm font-sans text-slate-500">cm&sup2;</span></div>
+                                        </div>
+                                        
+                                        <div class="flex justify-between items-center bg-purple-100 dark:bg-purple-900/50 p-3 rounded-lg border border-purple-200 dark:border-purple-700 shadow mt-4">
+                                            <div class="text-purple-800 dark:text-purple-200 font-bold">Luas Permukaan</div>
+                                            <div class="font-bold text-xl font-mono text-purple-700 dark:text-purple-300"><span id="resLp">0</span> <span class="text-sm font-sans">cm&sup2;</span></div>
+                                        </div>
+                                        
+                                        <div class="flex justify-between items-center bg-indigo-100 dark:bg-indigo-800/60 p-4 rounded-lg border border-indigo-300 dark:border-indigo-600 shadow-md">
+                                            <div class="text-indigo-900 dark:text-indigo-100 font-bold text-lg">Volume (V)</div>
+                                            <div class="font-bold text-2xl md:text-3xl font-mono text-primary dark:text-indigo-300"><span id="resV">0</span> <span class="text-sm md:text-base font-sans text-indigo-700 dark:text-indigo-400">cm&sup3;</span></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Prompt for Sim 2 & 3 -->
+                                    <div id="simPromptBox" class="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded text-sm hidden border border-yellow-300">
+                                        <strong>Pertanyaan Eksplorasi:</strong> <span id="simPromptTxt"></span>
+                                    </div>
+                                </div>
+                                <button onclick="markProgress('simulasi'); playSuccessSound(); showToast('Simulasi selesai! Lanjut ke latihan.');" class="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-bold shadow-md transition">Tandai Selesai</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: Video Pembelajaran -->
+                <section id="view-video" class="view-section hidden fade-in">
+                    <div class="max-w-4xl mx-auto">
+                        <h2 class="text-3xl font-bold font-heading mb-6 flex items-center"><i class="fab fa-youtube text-red-500 mr-3"></i> Video Pembelajaran</h2>
+                        <p class="mb-6 text-slate-600 dark:text-slate-400">Tonton video-video berikut untuk memperdalam pemahamanmu tentang materi kerucut.</p>
+                        
+                        <div class="space-y-8">
+                            <!-- Video Item -->
+                            <div class="bg-white dark:bg-darkcard rounded-xl shadow p-4 border border-slate-200 dark:border-slate-700">
+                                <h3 class="font-bold text-lg mb-3">1. Pengenalan & Unsur Kerucut</h3>
+                                <div class="aspect-video w-full bg-slate-200 rounded-lg overflow-hidden relative">
+                                    <iframe class="w-full h-full" src="https://www.youtube.com/embed/eMriIPV1KKg?si=tOzMBPAqEu2Xq8rJ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                                </div>
+                                <p class="mt-3 text-sm text-slate-600 dark:text-slate-400">Video penjelasan konsep dasar dan bagian-bagian penyusun kerucut.</p>
+                            </div>
+                            
+                            <div class="text-center mt-8">
+                                <button onclick="markProgress('video'); navigateTo('contoh');" class="bg-primary hover:bg-indigo-700 text-white px-8 py-3 rounded-full transition shadow-lg font-semibold">Saya Sudah Menonton <i class="fas fa-check-circle ml-2"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: Contoh Soal -->
+                <section id="view-contoh" class="view-section hidden fade-in">
+                    <div class="max-w-4xl mx-auto">
+                        <div class="bg-white dark:bg-darkcard rounded-xl shadow-lg p-6 md:p-8">
+                            <h2 class="text-3xl font-bold font-heading mb-2 text-primary"><i class="fas fa-book-open mr-3"></i>Contoh Soal & Pembahasan</h2>
+                            <p class="text-slate-600 dark:text-slate-400 mb-8">Pelajari langkah-langkah penyelesaian soal berikut sebelum mengerjakan evaluasi.</p>
+                            
+                            <div class="space-y-4" id="contohAccordion">
+                                <!-- Accordion items generated by JS -->
+                            </div>
+                            
+                            <div class="mt-10 flex justify-between items-center border-t pt-6 dark:border-slate-700">
+                                <span class="text-sm text-slate-500">Pahami dengan baik sebelum lanjut.</span>
+                                <button onclick="markProgress('contoh'); navigateTo('chat');" class="bg-secondary hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition shadow">Tanya Chatbot AI <i class="fas fa-robot ml-2"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: Chatbot AI -->
+                <section id="view-chat" class="view-section hidden fade-in h-full flex flex-col">
+                    <div class="bg-white dark:bg-darkcard rounded-xl shadow-lg flex-1 flex flex-col overflow-hidden max-w-5xl mx-auto w-full border border-slate-200 dark:border-slate-700">
+                        <!-- Chat Header -->
+                        <div class="bg-gradient-to-r from-blue-600 to-indigo-700 p-4 text-white flex justify-between items-center">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center text-primary text-2xl mr-4 shadow">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-lg font-heading">TANYA MATEMATIKA AI</h3>
+                                    <p class="text-xs text-blue-100 flex items-center"><span class="w-2 h-2 bg-green-400 rounded-full mr-1 inline-block animate-pulse"></span> Online Tutor</p>
+                                </div>
+                            </div>
+                            <button onclick="showModal('apiModal')" class="text-white/70 hover:text-white text-sm" title="Pengaturan AI"><i class="fas fa-cog"></i></button>
+                        </div>
+                        
+                        <!-- Quick Prompts -->
+                        <div class="bg-slate-100 dark:bg-slate-800 p-3 border-b dark:border-slate-700 flex space-x-2 overflow-x-auto whitespace-nowrap">
+                            <button onclick="sendQuickMsg('Bagaimana cara menghitung volume kerucut?')" class="bg-white dark:bg-darkcard border border-slate-300 dark:border-slate-600 px-3 py-1 rounded-full text-xs hover:bg-slate-50 transition">Cara hitung volume?</button>
+                            <button onclick="sendQuickMsg('Apa bedanya tinggi dan garis pelukis?')" class="bg-white dark:bg-darkcard border border-slate-300 dark:border-slate-600 px-3 py-1 rounded-full text-xs hover:bg-slate-50 transition">Beda tinggi & garis pelukis?</button>
+                            <button onclick="sendQuickMsg('Beri saya satu soal latihan tentang luas selimut kerucut.')" class="bg-white dark:bg-darkcard border border-slate-300 dark:border-slate-600 px-3 py-1 rounded-full text-xs hover:bg-slate-50 transition">Minta soal latihan</button>
+                        </div>
+
+                        <!-- Chat Messages Area -->
+                        <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-900 relative">
+                            <!-- Welcome Message -->
+                            <div class="flex items-start max-w-[85%]">
+                                <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs mr-2 shrink-0"><i class="fas fa-robot"></i></div>
+                                <div class="bg-white dark:bg-darkcard p-3 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 dark:border-slate-800">
+                                    <p class="text-sm">Halo! Saya Tutor AI yang siap membantu kamu belajar materi Kerucut. Ada yang ingin ditanyakan atau kita latihan soal bersama?</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chat Input -->
+                        <div class="p-4 bg-white dark:bg-darkcard border-t dark:border-slate-700">
+                            <form id="chatForm" onsubmit="handleChatSubmit(event)" class="flex relative">
+                                <input type="text" id="chatInput" placeholder="Ketik pertanyaanmu di sini..." class="flex-1 bg-slate-100 dark:bg-slate-800 border-none rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary text-sm" autocomplete="off">
+                                <button type="submit" class="absolute right-1 top-1 bottom-1 bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-indigo-700 transition" id="chatSubmitBtn">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </form>
+                            <div class="text-[10px] text-center text-slate-400 mt-2">AI dapat membuat kesalahan. Periksa kembali informasi perhitungan.</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: Evaluasi -->
+                <section id="view-evaluasi" class="view-section hidden fade-in max-w-4xl mx-auto h-full flex flex-col justify-center">
+                    <!-- Start Screen -->
+                    <div id="evalStartScreen" class="bg-white dark:bg-darkcard rounded-xl shadow-xl p-8 text-center">
+                        <i class="fas fa-clipboard-list text-6xl text-primary mb-4"></i>
+                        <h2 class="text-3xl font-bold font-heading mb-2">Evaluasi Pembelajaran</h2>
+                        <p class="text-slate-600 dark:text-slate-400 mb-6">Uji pemahamanmu dengan 15 soal pilihan ganda (Mudah, Sedang, HOTS).</p>
+                        <ul class="text-left max-w-sm mx-auto mb-8 space-y-2 text-sm text-slate-700 dark:text-slate-300">
+                            <li><i class="fas fa-check text-green-500 mr-2"></i> Kerjakan sendiri dengan teliti.</li>
+                            <li><i class="fas fa-check text-green-500 mr-2"></i> Siapkan kertas coretan jika perlu.</li>
+                            <li><i class="fas fa-check text-green-500 mr-2"></i> Nilai akan dihitung otomatis.</li>
+                        </ul>
+                        <button onclick="startQuiz()" class="bg-primary hover:bg-indigo-700 text-white px-8 py-3 rounded-full font-bold shadow-lg transition text-lg w-full sm:w-auto">Mulai Evaluasi <i class="fas fa-play ml-2"></i></button>
+                    </div>
+
+                    <!-- Quiz UI -->
+                    <div id="evalQuizScreen" class="hidden bg-white dark:bg-darkcard rounded-xl shadow-xl p-6 md:p-8 relative">
+                        <div class="flex justify-between items-center mb-6 text-sm font-semibold text-slate-500">
+                            <div>Soal <span id="qCurrent">1</span> / 15</div>
+                            <div id="qCategory" class="px-2 py-1 bg-blue-100 text-blue-800 rounded">Mudah</div>
+                        </div>
+                        
+                        <!-- Progress bar -->
+                        <div class="w-full bg-slate-200 rounded-full h-1.5 mb-8">
+                            <div id="quizProgress" class="bg-primary h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+
+                        <div id="qText" class="text-lg md:text-xl font-medium mb-6 min-h-[60px]">Pertanyaan akan muncul di sini...</div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" id="qOptions">
+                            <!-- Options generated by JS -->
+                        </div>
+                        
+                        <div id="qFeedback" class="hidden p-4 rounded-lg mb-6 border animate-fade-in">
+                            <div class="font-bold flex items-center mb-1" id="qFeedbackTitle"><i class="fas fa-check-circle mr-2"></i> Benar!</div>
+                            <p id="qFeedbackText" class="text-sm"></p>
+                        </div>
+                        
+                        <div class="flex justify-end">
+                            <button id="btnNextQuestion" onclick="nextQuestion()" class="hidden bg-primary text-white px-6 py-2 rounded shadow hover:bg-indigo-700 transition">Selanjutnya <i class="fas fa-arrow-right ml-2"></i></button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: Hasil & Sertifikat -->
+                <section id="view-hasil" class="view-section hidden fade-in max-w-4xl mx-auto">
+                    <div class="bg-white dark:bg-darkcard rounded-xl shadow-xl overflow-hidden relative">
+                        <!-- Confetti/Decor -->
+                        <div class="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-primary to-secondary z-0"></div>
+                        
+                        <div class="relative z-10 p-8 text-center pt-16">
+                            <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center text-4xl shadow-xl mx-auto mb-4 border-4 border-white" id="resultIcon">
+                                🏆
+                            </div>
+                            <h2 class="text-3xl font-bold font-heading mb-1 text-slate-800 dark:text-white" id="resultTitle">Luar Biasa!</h2>
+                            <p class="text-slate-500 mb-8">Kamu telah menyelesaikan Evaluasi Kerucut.</p>
+                            
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                                <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">
+                                    <div class="text-sm text-slate-500 mb-1">Nilai Akhir</div>
+                                    <div class="text-3xl font-bold text-primary" id="resScore">100</div>
+                                </div>
+                                <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">
+                                    <div class="text-sm text-slate-500 mb-1">Kategori</div>
+                                    <div class="text-xl font-bold text-secondary mt-1" id="resCategory">Sangat Baik</div>
+                                </div>
+                                <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">
+                                    <div class="text-sm text-slate-500 mb-1">Benar</div>
+                                    <div class="text-3xl font-bold text-green-500" id="resCorrect">15</div>
+                                </div>
+                                <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">
+                                    <div class="text-sm text-slate-500 mb-1">Salah</div>
+                                    <div class="text-3xl font-bold text-red-500" id="resWrong">0</div>
+                                </div>
+                            </div>
+                            
+                            <div id="resRecommendation" class="bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 p-4 rounded-lg mb-8 text-sm text-left border border-blue-200 dark:border-blue-800">
+                                Rekomendasi akan muncul di sini.
+                            </div>
+
+                            <hr class="mb-8 dark:border-slate-700">
+                            
+                            <h3 class="text-xl font-bold mb-4">Dapatkan Sertifikatmu</h3>
+                            <div class="flex flex-col sm:flex-row justify-center items-center gap-4 max-w-md mx-auto">
+                                <input type="text" id="certName" placeholder="Masukkan Nama Lengkapmu" class="w-full px-4 py-2 border rounded shadow-sm focus:outline-none focus:border-primary dark:bg-slate-800 dark:border-slate-700">
+                                <button onclick="generatePDF()" class="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded shadow transition font-semibold whitespace-nowrap"><i class="fas fa-download mr-2"></i> Download PDF</button>
+                            </div>
+                            
+                            <div class="mt-8 flex justify-center space-x-4">
+                                <button onclick="startQuiz()" class="text-primary hover:underline text-sm"><i class="fas fa-redo mr-1"></i>Ulangi Evaluasi</button>
+                                <button onclick="navigateTo('dashboard')" class="text-slate-500 hover:underline text-sm"><i class="fas fa-home mr-1"></i>Ke Beranda</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+            </div>
+        </main>
+    </div>
+
+    <!-- Hidden Certificate Template for PDF Generation -->
+    <div id="certificateTemplate" style="display:none; position: fixed; top: -9999px; left: -9999px; width: 800px; height: 600px; background: white; padding: 40px; box-sizing: border-box; font-family: sans-serif; text-align: center; border: 10px solid #4F46E5;">
+        <div style="border: 2px solid #9333EA; height: 100%; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center;">
+            <div style="font-size: 40px; color: #4F46E5; font-weight: bold; margin-bottom: 10px; font-family: serif;">SERTIFIKAT PENGHARGAAN</div>
+            <div style="font-size: 16px; color: #666; margin-bottom: 30px;">Diberikan dengan bangga kepada:</div>
+            <div id="certNameDisplay" style="font-size: 36px; font-weight: bold; color: #111; margin-bottom: 20px; border-bottom: 2px solid #ccc; display: inline-block; padding-bottom: 5px; min-width: 400px;">NAMA SISWA</div>
+            <div style="font-size: 18px; color: #444; line-height: 1.6; margin-bottom: 30px;">
+                Telah berhasil menyelesaikan pembelajaran interaktif dan lulus evaluasi<br>
+                materi <strong>Bangun Ruang Kerucut</strong> tingkat SMP<br>
+                dengan perolehan nilai:
+            </div>
+            <div id="certScoreDisplay" style="font-size: 48px; font-weight: bold; color: #9333EA; margin-bottom: 40px;">100</div>
+            <div style="display: flex; justify-content: space-between; padding: 0 50px; margin-top: auto;">
+                <div style="text-align: left;">
+                    <div id="certDate" style="font-size: 14px; margin-bottom: 5px; border-bottom: 1px solid #000; padding-bottom: 5px; width: 150px;">Tanggal</div>
+                    <div style="font-size: 12px; color: #666;">Tanggal Terbit</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 16px; font-weight:bold; margin-bottom: 5px; border-bottom: 1px solid #000; padding-bottom: 5px; width: 200px;">I Made Edy Bangkit Saputra</div>
+                    <div style="font-size: 12px; color: #666;">Pengembang Aplikasi</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- API Key Modal (Hidden by default, used if user wants real AI instead of simulated) -->
+    <div id="apiModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center fade-in backdrop-blur-sm">
+        <div class="bg-white dark:bg-darkcard p-6 rounded-xl shadow-2xl max-w-md w-full mx-4">
+            <h3 class="text-xl font-bold mb-4"><i class="fas fa-cogs mr-2"></i>Pengaturan AI (Opsional)</h3>
+            <p class="text-sm mb-4 text-slate-600 dark:text-slate-400">Media ini memiliki simulasi Chatbot lokal. Untuk mengaktifkan Gemini AI sesungguhnya, masukkan API Key. (Biarkan kosong untuk menggunakan model bawaan Canvas jika tersedia).</p>
+            <input type="password" id="geminiApiKeyInput" placeholder="Masukkan Gemini API Key (Opsional)" class="w-full px-4 py-2 border rounded mb-4 focus:outline-none focus:border-primary dark:bg-slate-800 dark:border-slate-700">
+            <div class="flex justify-end space-x-2">
+                <button onclick="hideModal('apiModal')" class="px-4 py-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition">Tutup</button>
+                <button onclick="saveApiKey()" class="bg-primary text-white px-4 py-2 rounded shadow hover:bg-indigo-700 transition">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Petunjuk Modal -->
+    <div id="petunjukModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center fade-in backdrop-blur-sm">
+        <div class="bg-white dark:bg-darkcard p-6 rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
+            <h3 class="text-2xl font-bold mb-4 border-b pb-2"><i class="fas fa-info-circle mr-2 text-primary"></i>Petunjuk Penggunaan</h3>
+            <div class="overflow-y-auto flex-1 text-sm space-y-4 pr-2">
+                <p>Selamat datang di <strong>KERUCUT INTERAKTIF</strong>!</p>
+                <ul class="list-disc pl-5 space-y-2">
+                    <li>Gunakan <strong>Menu di sebelah kiri</strong> (atau tombol <i class="fas fa-bars"></i> di HP) untuk berpindah halaman.</li>
+                    <li>Ikuti pembelajaran secara berurutan mulai dari <strong>Tujuan, Materi, Eksplorasi 3D, Simulasi, Video,</strong> hingga <strong>Contoh Soal</strong>.</li>
+                    <li>Pada <strong>Eksplorasi 3D</strong>, kamu bisa menggeser gambar dengan mouse/sentuhan untuk memutar bentuk kerucut.</li>
+                    <li>Gunakan <strong>Simulasi Interaktif</strong> untuk mencoba mengubah angka jari-jari dan tinggi, dan lihat perhitungan otomatisnya.</li>
+                    <li>Gunakan <strong>Chatbot AI</strong> jika kamu bingung dan butuh teman diskusi matematika.</li>
+                    <li>Uji kemampuanmu di menu <strong>Evaluasi</strong> dan dapatkan sertifikat jika nilaimu bagus!</li>
+                </ul>
+                <p class="font-bold text-primary mt-4">Tips: Aktifkan suara dengan tombol <i class="fas fa-volume-mute"></i> di pojok kanan atas untuk pengalaman yang lebih menyenangkan.</p>
+            </div>
+            <div class="flex justify-end mt-4 pt-4 border-t">
+                <button onclick="hideModal('petunjukModal')" class="bg-primary text-white px-6 py-2 rounded shadow hover:bg-indigo-700 transition font-bold">Mengerti</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        // --- 1. STATE & ROUTING ---
+        const state = {
+            currentView: 'landing',
+            progress: {
+                tujuan: false, materi: false, eksplorasi: false, simulasi: false, video: false, contoh: false, chat: false, evaluasi: false
+            },
+            geminiApiKey: "", // As per instruction, leave empty string for Canvas to provide
+        };
+
+        const menus = [
+            { id: 'dashboard', icon: 'fa-home', label: 'Beranda' },
+            { id: 'tujuan', icon: 'fa-bullseye', label: 'Tujuan Pembelajaran' },
+            { id: 'materi', icon: 'fa-book', label: 'Materi Kerucut' },
+            { id: 'eksplorasi', icon: 'fa-cube', label: 'Eksplorasi 3D' },
+            { id: 'simulasi', icon: 'fa-sliders-h', label: 'Simulasi Interaktif' },
+            { id: 'video', icon: 'fa-play-circle', label: 'Video Pembelajaran' },
+            { id: 'contoh', icon: 'fa-chalkboard-teacher', label: 'Contoh Soal' },
+            { id: 'chat', icon: 'fa-robot', label: 'Tanya Matematika AI' },
+            { id: 'evaluasi', icon: 'fa-tasks', label: 'Evaluasi' },
+            { id: 'hasil', icon: 'fa-award', label: 'Hasil Belajar' },
+        ];
+
+        function initApp() {
+            renderNavMenu();
+            renderDashboardCards();
+            renderContohSoal();
+            
+            // Check local storage for dark mode
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+            updateThemeIcon();
+            
+            // Load saved state if any
+            const savedState = localStorage.getItem('kerucutState');
+            if(savedState) {
+                const parsed = JSON.parse(savedState);
+                if(parsed.progress) state.progress = parsed.progress;
+                updateProgressUI();
+            }
+
+            // Start 3D scenes
+            initExplore3D();
+            initSim3D();
+        }
+
+        function navigateTo(viewId) {
+            // Hide all
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            // Show target
+            document.getElementById(`view-${viewId}`).classList.remove('hidden');
+            
+            // Handle specific view logic
+            if(viewId !== 'landing') {
+                document.getElementById('headerTitle').innerText = menus.find(m => m.id === viewId)?.label || '';
+                updateNavActive(viewId);
+                
+                // Close sidebar on mobile after click
+                if(window.innerWidth < 768) {
+                    document.getElementById('sidebar').classList.add('-translate-x-full');
+                }
+            }
+
+            // Resize canvases if needed when they become visible
+            if(viewId === 'eksplorasi' && expController) expController.resize();
+            if(viewId === 'simulasi' && simController) simController.resize();
+
+            state.currentView = viewId;
+            
+            // Small scroll to top of content
+            document.getElementById('contentContainer').scrollTo(0,0);
+        }
+
+        function renderNavMenu() {
+            const nav = document.getElementById('navMenu');
+            nav.innerHTML = menus.map(m => `
+                <a href="#" onclick="navigateTo('${m.id}')" id="nav-${m.id}" class="flex items-center px-4 py-3 rounded-lg transition-colors text-slate-600 hover:bg-indigo-50 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800 font-medium">
+                    <div class="w-6 text-center mr-3"><i class="fas ${m.icon}"></i></div>
+                    ${m.label}
+                    ${state.progress[m.id] ? '<i class="fas fa-check-circle text-green-500 ml-auto text-xs"></i>' : ''}
+                </a>
+            `).join('');
+        }
+
+        function renderDashboardCards() {
+            const grid = document.getElementById('dashboardGrid');
+            const skipMenus = ['dashboard', 'hasil'];
+            grid.innerHTML = menus.filter(m => !skipMenus.includes(m.id)).map((m, i) => `
+                <div onclick="navigateTo('${m.id}')" class="bg-white dark:bg-darkcard p-6 rounded-xl shadow-md hover:shadow-xl transition transform hover:-translate-y-1 cursor-pointer border border-transparent hover:border-primary group">
+                    <div class="w-12 h-12 rounded-full bg-indigo-50 dark:bg-slate-700 text-primary dark:text-indigo-400 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition">
+                        <i class="fas ${m.icon}"></i>
+                    </div>
+                    <h3 class="font-bold text-lg mb-1">${i+1}. ${m.label}</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Klik untuk mempelajari materi ini.</p>
+                </div>
+            `).join('');
+        }
+
+        function updateNavActive(id) {
+            document.querySelectorAll('#navMenu a').forEach(el => {
+                el.classList.remove('bg-indigo-50', 'text-primary', 'dark:bg-slate-800', 'font-bold');
+                el.classList.add('text-slate-600', 'dark:text-slate-300');
+            });
+            const active = document.getElementById(`nav-${id}`);
+            if(active) {
+                active.classList.remove('text-slate-600', 'dark:text-slate-300');
+                active.classList.add('bg-indigo-50', 'text-primary', 'dark:bg-slate-800', 'font-bold');
+            }
+        }
+
+        function toggleSidebar() {
+            const sb = document.getElementById('sidebar');
+            sb.classList.toggle('-translate-x-full');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.remove('translate-x-full');
+            setTimeout(() => { toast.classList.add('translate-x-full'); }, 3000);
+        }
+
+        function markProgress(id) {
+            if(state.progress[id] === undefined) return;
+            if(!state.progress[id]) {
+                state.progress[id] = true;
+                updateProgressUI();
+                localStorage.setItem('kerucutState', JSON.stringify({progress: state.progress}));
+            }
+        }
+
+        function updateProgressUI() {
+            const keys = Object.keys(state.progress);
+            const done = keys.filter(k => state.progress[k]).length;
+            const pct = Math.round((done / keys.length) * 100);
+            document.getElementById('sidebarProgress').style.width = `${pct}%`;
+            if(document.getElementById('dashProgressTxt')) document.getElementById('dashProgressTxt').innerText = `${pct}%`;
+            renderNavMenu(); // Refresh checkmarks
+            updateNavActive(state.currentView); // maintain active state
+        }
+
+        // --- 2. THEME & UTILS ---
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            if (document.documentElement.classList.contains('dark')) {
+                localStorage.theme = 'dark';
+            } else {
+                localStorage.theme = 'light';
+            }
+            updateThemeIcon();
+            // Update Three.js background colors if needed
+            if(expController) expController.updateTheme(localStorage.theme === 'dark');
+            if(simController) simController.updateTheme(localStorage.theme === 'dark');
+        }
+        function updateThemeIcon() {
+            const isDark = document.documentElement.classList.contains('dark');
+            document.getElementById('themeIcon').className = isDark ? 'fas fa-sun text-lg' : 'fas fa-moon text-lg';
+        }
+
+        function showModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function hideModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function saveApiKey() {
+            state.geminiApiKey = document.getElementById('geminiApiKeyInput').value;
+            hideModal('apiModal');
+            showToast('Pengaturan AI disimpan.');
+        }
+
+        // --- 3. MATERI LOGIC ---
+        function switchMateriTab(tabId) {
+            // hide all
+            document.querySelectorAll('.materi-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.materi-tab').forEach(el => {
+                el.classList.remove('bg-primary', 'text-white');
+                el.classList.add('text-slate-500', 'hover:text-primary');
+            });
+            // show target
+            document.getElementById(`materi-${tabId}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabId}`).classList.remove('text-slate-500', 'hover:text-primary');
+            document.getElementById(`tab-${tabId}`).classList.add('bg-primary', 'text-white');
+        }
+
+        function toggleNetAnim() {
+            const container = document.getElementById('netAnimContainer');
+            container.classList.toggle('animating');
+            const btn = document.getElementById('btnNetAnim');
+            if(container.classList.contains('animating')){
+                btn.innerHTML = '<i class="fas fa-undo mr-2"></i> TUTUP JARING-JARING';
+            } else {
+                btn.innerHTML = '<i class="fas fa-magic mr-2"></i> ANIMASIKAN JARING-JARING';
+            }
+        }
+
+        // --- 4. THREE.JS EXPLORATION ---
+        let expController = null;
+        function initExplore3D() {
+            const container = document.getElementById('exploreCanvasContainer');
+            const canvas = document.getElementById('exploreCanvas');
+            
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(localStorage.theme === 'dark' ? 0x0f172a : 0xf1f5f9);
+            
+            const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+            camera.position.set(0, 15, 25);
+            
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(10, 20, 10);
+            scene.add(dirLight);
+            
+            // Cone Base Material
+            const mat = new THREE.MeshPhongMaterial({ color: 0x4f46e5, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+            const r = 5, t = 10;
+            const geometry = new THREE.ConeGeometry(r, t, 32);
+            // Translate geometry so base is at y=0 instead of center
+            geometry.translate(0, t/2, 0); 
+            const cone = new THREE.Mesh(geometry, mat);
+            
+            // Wireframe
+            const edges = new THREE.EdgesGeometry(geometry);
+            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 }));
+            cone.add(line);
+            
+            // Add base circle explicitly for better visibility
+            const baseGeo = new THREE.CircleGeometry(r, 32);
+            baseGeo.rotateX(-Math.PI / 2);
+            const baseMesh = new THREE.Mesh(baseGeo, new THREE.MeshPhongMaterial({color: 0x818cf8, side: THREE.DoubleSide, transparent:true, opacity:0.8}));
+            cone.add(baseMesh);
+
+            scene.add(cone);
+            
+            // Axes helper (custom for labels)
+            const lineMat = new THREE.LineBasicMaterial({ linewidth: 2 });
+            const pCenter = new THREE.Vector3(0,0,0);
+            const pTop = new THREE.Vector3(0,t,0);
+            const pEdge = new THREE.Vector3(r,0,0);
+            
+            // Tinggi line (Red)
+            const tGeo = new THREE.BufferGeometry().setFromPoints([pCenter, pTop]);
+            const tLine = new THREE.Line(tGeo, new THREE.LineBasicMaterial({color: 0xff0000}));
+            scene.add(tLine);
+            
+            // Jari-jari line (Green)
+            const rGeo = new THREE.BufferGeometry().setFromPoints([pCenter, pEdge]);
+            const rLine = new THREE.Line(rGeo, new THREE.LineBasicMaterial({color: 0x00ff00}));
+            scene.add(rLine);
+            
+            // Garis Pelukis line (Blue)
+            const sGeo = new THREE.BufferGeometry().setFromPoints([pEdge, pTop]);
+            const sLine = new THREE.Line(sGeo, new THREE.LineBasicMaterial({color: 0x0000ff}));
+            scene.add(sLine);
+
+            // Point Puncak
+            const pGeom = new THREE.SphereGeometry(0.3, 16, 16);
+            const pMesh = new THREE.Mesh(pGeom, new THREE.MeshBasicMaterial({color: 0xeab308}));
+            pMesh.position.copy(pTop);
+            scene.add(pMesh);
+
+            let autoRotate = false;
+
+            // Projection logic for HTML labels
+            const labels = {
+                t: { el: document.getElementById('label-t-exp'), pos: new THREE.Vector3(0, t/2, 0), obj: tLine, cb: 'cbTinggi' },
+                r: { el: document.getElementById('label-r-exp'), pos: new THREE.Vector3(r/2, 0, 0), obj: rLine, cb: 'cbJari' },
+                s: { el: document.getElementById('label-s-exp'), pos: new THREE.Vector3(r/2, t/2, 0), obj: sLine, cb: 'cbPelukis' },
+                p: { el: document.getElementById('label-p-exp'), pos: new THREE.Vector3(0, t+1, 0), obj: pMesh, cb: 'cbPuncak' }
+            };
+
+            function updateLabels() {
+                const masterShow = document.getElementById('cbShowLines').checked;
+                for (let key in labels) {
+                    const l = labels[key];
+                    const cbChecked = document.getElementById(l.cb).checked;
+                    l.obj.visible = masterShow && cbChecked;
+                    
+                    if (l.obj.visible) {
+                        const vector = l.pos.clone();
+                        vector.project(camera);
+                        const x = (vector.x * .5 + .5) * container.clientWidth;
+                        const y = (vector.y * -.5 + .5) * container.clientHeight;
+                        
+                        // Check if behind camera
+                        if(vector.z > 1) {
+                            l.el.classList.add('hidden');
+                        } else {
+                            l.el.classList.remove('hidden');
+                            l.el.style.left = `${x}px`;
+                            l.el.style.top = `${y}px`;
+                        }
+                    } else {
+                        l.el.classList.add('hidden');
+                    }
+                }
+                // adjust cone opacity slightly if lines are hidden for better view
+                mat.opacity = masterShow ? 0.7 : 0.9;
+            }
+
+            function animate() {
+                requestAnimationFrame(animate);
+                if(state.currentView !== 'eksplorasi') return; // Pause if not visible
+                
+                if(autoRotate) {
+                    scene.rotation.y += 0.01;
+                } else {
+                    scene.rotation.y = 0; // Keep fixed when manual to match labels correctly if grouped, but here labels are world pos.
+                    // Actually, if we rotate scene, labels positions need to be updated relative to rotation.
+                    // Better to rotate cone group.
+                }
+                
+                controls.update();
+                renderer.render(scene, camera);
+                updateLabels();
+            }
+            animate();
+
+            expController = {
+                resize: function() {
+                    const w = container.clientWidth;
+                    const h = container.clientHeight;
+                    camera.aspect = w / h;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(w, h);
+                },
+                toggleAutoRotate: function() {
+                    autoRotate = !autoRotate;
+                    const btn = document.getElementById('btnAutoRotate');
+                    if(autoRotate) {
+                        btn.classList.replace('bg-indigo-100', 'bg-indigo-600');
+                        btn.classList.replace('text-indigo-700', 'text-white');
+                        btn.innerHTML = '<i class="fas fa-pause mr-2"></i>Jeda Putaran';
+                    } else {
+                        btn.classList.replace('bg-indigo-600', 'bg-indigo-100');
+                        btn.classList.replace('text-white', 'text-indigo-700');
+                        btn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Putar Otomatis';
+                    }
+                },
+                resetView: function() {
+                    controls.reset();
+                    camera.position.set(0, 15, 25);
+                    scene.rotation.y = 0;
+                    autoRotate = false;
+                    document.getElementById('btnAutoRotate').innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Putar Otomatis';
+                    document.getElementById('btnAutoRotate').className = 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-200 py-2 rounded hover:bg-indigo-200 transition';
+                },
+                updateVisibility: function() {
+                    const master = document.getElementById('cbShowLines').checked;
+                    ['cbTinggi', 'cbJari', 'cbPelukis', 'cbPuncak'].forEach(id => document.getElementById(id).disabled = !master);
+                },
+                updateTheme: function(isDark) {
+                    scene.background.setHex(isDark ? 0x0f172a : 0xf1f5f9);
+                }
+            };
+            
+            window.addEventListener('resize', () => {
+                if(state.currentView === 'eksplorasi') expController.resize();
+            });
+        }
+
+        // --- 5. SIMULASI INTERAKTIF ---
+        let simController = null;
+        let currentSimMode = 1;
+
+        function switchSimTab(mode) {
+            currentSimMode = mode;
+            for(let i=1; i<=4; i++) {
+                const btn = document.getElementById(`btnSim${i}`);
+                if(i===mode) {
+                    btn.classList.add('border-b-2', 'border-primary', 'bg-white', 'dark:bg-darkcard');
+                    btn.classList.remove('text-slate-500');
+                    btn.classList.add('text-primary');
+                } else {
+                    btn.classList.remove('border-b-2', 'border-primary', 'bg-white', 'dark:bg-darkcard', 'text-primary');
+                    btn.classList.add('text-slate-500');
+                }
+            }
+            
+            const ctrlR = document.getElementById('control-r');
+            const ctrlT = document.getElementById('control-t');
+            const promptBox = document.getElementById('simPromptBox');
+            const title = document.getElementById('simTitle');
+            const desc = document.getElementById('simDesc');
+
+            if(mode === 1) {
+                title.innerText = "Simulasi 1: Kalkulator Kerucut";
+                desc.innerText = "Ubah jari-jari dan tinggi secara bebas.";
+                ctrlR.style.display = 'block'; ctrlT.style.display = 'block';
+                promptBox.classList.add('hidden');
+                simController.setMode('cone');
+            } else if (mode === 2) {
+                title.innerText = "Simulasi 2: Eksplorasi Jari-jari";
+                desc.innerText = "Tinggi dibuat tetap (15 cm). Amati perubahan volume saat r berubah.";
+                ctrlR.style.display = 'block'; ctrlT.style.display = 'none';
+                document.getElementById('sliderT').value = 15;
+                promptBox.classList.remove('hidden');
+                document.getElementById('simPromptTxt').innerText = "Apa yang terjadi pada volume dan bentuk kerucut ketika jari-jari diperbesar, sedangkan tingginya tetap?";
+                simController.setMode('cone');
+            } else if (mode === 3) {
+                title.innerText = "Simulasi 3: Eksplorasi Tinggi";
+                desc.innerText = "Jari-jari dibuat tetap (7 cm). Amati perubahan volume saat t berubah.";
+                ctrlR.style.display = 'none'; ctrlT.style.display = 'block';
+                document.getElementById('sliderR').value = 7;
+                promptBox.classList.remove('hidden');
+                document.getElementById('simPromptTxt').innerText = "Bagaimana pengaruh perubahan tinggi terhadap volume kerucut jika alasnya tetap?";
+                simController.setMode('cone');
+            } else if (mode === 4) {
+                title.innerText = "Simulasi 4: Kerucut vs Tabung";
+                desc.innerText = "Bandingkan volume kerucut dan tabung dengan r dan t yang sama.";
+                ctrlR.style.display = 'block'; ctrlT.style.display = 'block';
+                promptBox.classList.remove('hidden');
+                document.getElementById('simPromptTxt').innerText = "Perhatikan bahwa Volume Tabung = 3 x Volume Kerucut. Kerucut adalah sepertiga tabung.";
+                simController.setMode('compare');
+            }
+            updateSim();
+        }
+
+        function initSim3D() {
+            const container = document.getElementById('simCanvasContainer');
+            const canvas = document.getElementById('simCanvas');
+            
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(localStorage.theme === 'dark' ? 0x0f172a : 0xf1f5f9);
+            
+            // Using Orthographic for better relative size comparison in simulation
+            const aspect = container.clientWidth / container.clientHeight;
+            const d = 20;
+            const camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+            camera.position.set(20, 20, 20);
+            camera.lookAt(scene.position);
+            
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enablePan = false;
+            
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            dirLight.position.set(10, 20, 0);
+            scene.add(dirLight);
+
+            // Group for cone
+            const coneGroup = new THREE.Group();
+            const mat = new THREE.MeshPhongMaterial({ color: 0xec4899, transparent: true, opacity: 0.8 });
+            // Start with base geometry size 1, scale it dynamically
+            const coneGeo = new THREE.ConeGeometry(1, 1, 32);
+            coneGeo.translate(0, 0.5, 0);
+            const coneMesh = new THREE.Mesh(coneGeo, mat);
+            
+            // Grid helper
+            const gridHelper = new THREE.GridHelper(60, 60, 0x000000, 0x000000);
+            gridHelper.material.opacity = 0.1;
+            gridHelper.material.transparent = true;
+            scene.add(gridHelper);
+
+            // Group for cylinder (Mode 4)
+            const cylGroup = new THREE.Group();
+            const cylGeo = new THREE.CylinderGeometry(1, 1, 1, 32);
+            cylGeo.translate(0, 0.5, 0);
+            const cylMat = new THREE.MeshPhongMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.5 });
+            const cylMesh = new THREE.Mesh(cylGeo, cylMat);
+            const cylWire = new THREE.LineSegments(new THREE.EdgesGeometry(cylGeo), new THREE.LineBasicMaterial({color: 0x1d4ed8, transparent:true, opacity:0.3}));
+            cylMesh.add(cylWire);
+            cylGroup.add(cylMesh);
+            cylGroup.visible = false;
+            
+            coneGroup.add(coneMesh);
+            scene.add(coneGroup);
+            scene.add(cylGroup);
+
+            function animate() {
+                requestAnimationFrame(animate);
+                if(state.currentView !== 'simulasi') return;
+                
+                // Slow rotation
+                coneGroup.rotation.y += 0.005;
+                if(cylGroup.visible) {
+                    cylGroup.rotation.y += 0.005;
+                }
+                
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            simController = {
+                resize: function() {
+                    const w = container.clientWidth;
+                    const h = container.clientHeight;
+                    const aspect = w / h;
+                    camera.left = -d * aspect;
+                    camera.right = d * aspect;
+                    camera.top = d;
+                    camera.bottom = -d;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(w, h);
+                },
+                updateShape: function(r, t) {
+                    // Update scale based on r and t. 
+                    // Base size is 1, so scale is directly r and t.
+                    // Cap visual size to fit screen (divide by a factor, e.g. 1.5)
+                    const visualScaleR = r / 1.5;
+                    const visualScaleT = t / 1.5;
+                    
+                    coneGroup.scale.set(visualScaleR, visualScaleT, visualScaleR);
+                    cylGroup.scale.set(visualScaleR, visualScaleT, visualScaleR);
+                    
+                    // Reposition if side by side
+                    if(currentSimMode === 4) {
+                        coneGroup.position.x = -visualScaleR - 2;
+                        cylGroup.position.x = visualScaleR + 2;
+                    } else {
+                        coneGroup.position.x = 0;
+                    }
+                },
+                setMode: function(mode) {
+                    if(mode === 'compare') {
+                        cylGroup.visible = true;
+                        coneMesh.material.color.setHex(0xec4899); // Pink
+                    } else {
+                        cylGroup.visible = false;
+                        coneMesh.material.color.setHex(0x4f46e5); // Indigo
+                    }
+                },
+                updateTheme: function(isDark) {
+                    scene.background.setHex(isDark ? 0x0f172a : 0xf1f5f9);
+                    gridHelper.material.color.setHex(isDark ? 0xffffff : 0x000000);
+                }
+            };
+            
+            window.addEventListener('resize', () => {
+                if(state.currentView === 'simulasi') simController.resize();
+            });
+            
+            updateSim(); // Init values
+        }
+
+        function updateSim() {
+            const r = parseFloat(document.getElementById('sliderR').value);
+            const t = parseFloat(document.getElementById('sliderT').value);
+            const piMode = document.querySelector('input[name="piVal"]:checked').value;
+            const PI = piMode === '3.14' ? 3.14 : 22/7;
+
+            document.getElementById('valR').innerText = r;
+            document.getElementById('valT').innerText = t;
+
+            // Calculations
+            const s = Math.sqrt(r*r + t*t);
+            const la = PI * r * r;
+            const ls = PI * r * s;
+            const lp = la + ls;
+            const v = (1/3) * PI * r * r * t;
+
+            // Format numbers to max 2 decimal places
+            const fmt = (num) => Number.isInteger(num) ? num : num.toFixed(2);
+
+            document.getElementById('resS').innerText = fmt(s);
+            document.getElementById('resLa').innerText = fmt(la);
+            document.getElementById('resLs').innerText = fmt(ls);
+            document.getElementById('resLp').innerText = fmt(lp);
+            document.getElementById('resV').innerText = fmt(v);
+
+            if(simController) {
+                simController.updateShape(r, t);
+            }
+        }
+
+        // --- 6. CONTOH SOAL ---
+        const soalList = [
+            {
+                t: "Menghitung Volume",
+                q: "Sebuah kerucut memiliki jari-jari 7 cm dan tinggi 12 cm. Tentukan volumenya!",
+                a: `<strong>Diketahui:</strong><br>r = 7 cm<br>t = 12 cm<br>&pi; = 22/7<br><br><strong>Penyelesaian:</strong><br>V = &frac13; &times; &pi; &times; r&sup2; &times; t<br>V = &frac13; &times; 22/7 &times; 7&sup2; &times; 12<br>V = &frac13; &times; 22/7 &times; 49 &times; 12<br>V = 22 &times; 7 &times; 4<br>V = <strong>616 cm&sup3;</strong>`
+            },
+            {
+                t: "Menghitung Garis Pelukis",
+                q: "Sebuah kerucut memiliki jari-jari 5 cm dan tinggi 12 cm. Tentukan garis pelukisnya!",
+                a: `<strong>Gunakan Teorema Pythagoras:</strong><br>s = &radic;(r&sup2; + t&sup2;)<br>s = &radic;(5&sup2; + 12&sup2;)<br>s = &radic;(25 + 144)<br>s = &radic;169<br>s = <strong>13 cm</strong>`
+            },
+            {
+                t: "Menghitung Luas Selimut",
+                q: "Sebuah kerucut memiliki jari-jari 7 cm dan garis pelukis 10 cm. Tentukan luas selimutnya!",
+                a: `<strong>Diketahui:</strong> r = 7, s = 10, &pi; = 22/7<br><br><strong>Penyelesaian:</strong><br>Ls = &pi;rs<br>Ls = 22/7 &times; 7 &times; 10<br>Ls = 22 &times; 10<br>Ls = <strong>220 cm&sup2;</strong>`
+            },
+            {
+                t: "Menghitung Luas Permukaan",
+                q: "Sebuah kerucut memiliki jari-jari 7 cm dan garis pelukis 25 cm. Tentukan luas permukaannya!",
+                a: `<strong>Diketahui:</strong> r = 7, s = 25<br><br><strong>Penyelesaian:</strong><br>Lp = &pi;r(r + s)<br>Lp = 22/7 &times; 7 &times; (7 + 25)<br>Lp = 22 &times; 32<br>Lp = <strong>704 cm&sup2;</strong>`
+            },
+            {
+                t: "Soal Kontekstual (HOTS)",
+                q: "Sebuah topi ulang tahun berbentuk kerucut memiliki diameter 14 cm dan tinggi 24 cm. Berapakah luas kertas karton minimal yang dibutuhkan untuk membuat topi tersebut?",
+                a: `<strong>Analisis:</strong> Topi ulang tahun bagian bawahnya berlubang (tanpa alas). Jadi, kita hanya menghitung <strong>Luas Selimutnya</strong> saja.<br><br><strong>Diketahui:</strong><br>d = 14 cm &rarr; r = 7 cm<br>t = 24 cm<br><br><strong>Langkah 1: Cari garis pelukis (s)</strong><br>s = &radic;(7&sup2; + 24&sup2;) = &radic;(49 + 576) = &radic;625 = 25 cm.<br><br><strong>Langkah 2: Hitung Luas Selimut</strong><br>Ls = &pi;rs = 22/7 &times; 7 &times; 25 = 22 &times; 25 = <strong>550 cm&sup2;</strong>.`
+            }
+        ];
+
+        function renderContohSoal() {
+            const container = document.getElementById('contohAccordion');
+            container.innerHTML = soalList.map((s, i) => `
+                <div class="border dark:border-slate-700 rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-800 transition shadow-sm hover:shadow">
+                    <button onclick="toggleAccordion(${i})" class="w-full flex justify-between items-center p-4 font-bold text-left focus:outline-none">
+                        <span><span class="bg-primary text-white w-6 h-6 inline-flex justify-center items-center rounded-full mr-2 text-xs">${i+1}</span> ${s.t}</span>
+                        <i id="accIcon${i}" class="fas fa-chevron-down text-slate-400 transition-transform"></i>
+                    </button>
+                    <div id="accContent${i}" class="hidden px-4 pb-4">
+                        <div class="bg-white dark:bg-darkcard p-4 rounded border dark:border-slate-700 mb-3 text-lg font-medium text-slate-800 dark:text-slate-200">
+                            ${s.q}
+                        </div>
+                        <button onclick="document.getElementById('accPembahasan${i}').classList.remove('hidden'); this.classList.add('hidden')" class="bg-secondary text-white px-4 py-2 rounded text-sm shadow mb-2">Tampilkan Pembahasan</button>
+                        <div id="accPembahasan${i}" class="hidden bg-green-50 dark:bg-green-900/20 p-4 rounded border border-green-200 dark:border-green-800">
+                            ${s.a}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleAccordion(idx) {
+            const content = document.getElementById(`accContent${idx}`);
+            const icon = document.getElementById(`accIcon${idx}`);
+            if(content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                icon.classList.add('rotate-180');
+            } else {
+                content.classList.add('hidden');
+                icon.classList.remove('rotate-180');
+            }
+        }
+
+        // --- 7. CHATBOT AI ---
+        const sysPrompt = `Anda adalah "TANYA MATEMATIKA AI", tutor matematika SMP kelas 9 yang ahli untuk materi Bangun Ruang Kerucut. 
+Tujuan Anda membantu siswa memahami konsep, BUKAN memberikan jawaban langsung.
+Gunakan metode Socrates: berikan petunjuk bertahap, ajukan pertanyaan pemandu, berikan scaffolding.
+Jika siswa salah, jelaskan letak kesalahannya dengan ramah.
+Gunakan bahasa Indonesia yang sederhana, akrab, tapi baku (seperti tutor ke murid).
+Selalu dorong siswa untuk mencoba menghitung sendiri.
+Rumus referensi: Volume = 1/3 * pi * r^2 * t. Luas Permukaan = pi * r * (r + s). s = sqrt(r^2 + t^2).
+Gunakan format Markdown tebal untuk menegaskan istilah penting atau rumus.`;
+
+        let chatHistory = [{ role: "user", parts: [{ text: "Halo, bertindaklah sesuai instruksi sistem." }] }, { role: "model", parts: [{ text: "Baik, saya siap." }] }];
+
+        function appendMessage(role, text) {
+            const chatDiv = document.getElementById('chatMessages');
+            const isUser = role === 'user';
+            
+            const msgHTML = `
+                <div class="flex items-start max-w-[85%] ${isUser ? 'ml-auto flex-row-reverse' : ''}">
+                    <div class="w-8 h-8 rounded-full ${isUser ? 'bg-slate-300 ml-2' : 'bg-primary mr-2'} flex items-center justify-center ${isUser ? 'text-slate-600' : 'text-white'} text-xs shrink-0">
+                        <i class="fas ${isUser ? 'fa-user' : 'fa-robot'}"></i>
+                    </div>
+                    <div class="bg-white dark:bg-darkcard p-3 rounded-2xl ${isUser ? 'rounded-tr-none bg-blue-50 dark:bg-blue-900/30' : 'rounded-tl-none'} shadow-sm border border-slate-100 dark:border-slate-800 text-sm markdown-body">
+                        ${isUser ? text : marked.parse(text)}
+                    </div>
+                </div>
+            `;
+            chatDiv.insertAdjacentHTML('beforeend', msgHTML);
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+        }
+
+        function appendTyping() {
+            const chatDiv = document.getElementById('chatMessages');
+            const id = 'typing-' + Date.now();
+            const msgHTML = `
+                <div id="${id}" class="flex items-start max-w-[85%]">
+                    <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs mr-2 shrink-0"><i class="fas fa-robot"></i></div>
+                    <div class="bg-white dark:bg-darkcard p-3 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 dark:border-slate-800 text-sm flex space-x-1">
+                        <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
+                        <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                        <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                    </div>
+                </div>
+            `;
+            chatDiv.insertAdjacentHTML('beforeend', msgHTML);
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+            return id;
+        }
+
+        function sendQuickMsg(msg) {
+            document.getElementById('chatInput').value = msg;
+            handleChatSubmit(new Event('submit'));
+        }
+
+        async function handleChatSubmit(e) {
+            e.preventDefault();
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if(!text) return;
+            
+            appendMessage('user', text);
+            input.value = '';
+            const btn = document.getElementById('chatSubmitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            const typingId = appendTyping();
+            
+            // Prepare payload
+            chatHistory.push({ role: "user", parts: [{ text: text }] });
+
+            try {
+                // If using Canvas injected API key, it will be in the fetch call implicitly if left empty.
+                const apiKey = state.geminiApiKey || ""; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+                
+                const payload = {
+                    contents: chatHistory,
+                    systemInstruction: { parts: [{ text: sysPrompt }] }
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                document.getElementById(typingId).remove();
+
+                if(!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                const aiText = result.candidates[0].content.parts[0].text;
+                
+                chatHistory.push({ role: "model", parts: [{ text: aiText }] });
+                appendMessage('model', aiText);
+
+            } catch (error) {
+                console.error("AI Error:", error);
+                document.getElementById(typingId)?.remove();
+                
+                // Fallback to simple simulated rules if API fails or no key
+                let fallbackMsg = "Maaf, sepertinya saya sedang mengalami gangguan koneksi ke server AI utama. ";
+                const t = text.toLowerCase();
+                if(t.includes("volume")) {
+                    fallbackMsg += "Namun untuk volume kerucut, ingat rumusnya adalah 1/3 × luas alas × tinggi. Apakah kamu punya angka untuk jari-jari dan tingginya?";
+                } else if(t.includes("luas")) {
+                    fallbackMsg += "Untuk luas permukaan, kita butuh luas alas ditambah luas selimut. Rumusnya Lp = πr(r + s). Bagian mana yang sulit kamu pahami?";
+                } else if(t.includes("halo") || t.includes("hai")) {
+                    fallbackMsg = "Halo! Mari belajar tentang kerucut. Mau mulai dari Volume atau Luas Permukaan?";
+                } else {
+                    fallbackMsg += "Bisakah kamu bertanya lebih spesifik tentang kerucut (contoh: cara mencari volume)?";
+                }
+                
+                // Don't save fallback to history to keep it clean for when it reconnects
+                chatHistory.pop(); // remove user's last message from history since it failed
+                appendMessage('model', fallbackMsg);
+            }
+            
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+        }
+
+        // --- 8. EVALUASI ---
+        const quizData = [
+            { q: "Bangun ruang sisi lengkung yang memiliki satu alas berbentuk lingkaran dan satu titik puncak disebut...", o: ["Tabung", "Bola", "Kerucut", "Limas"], a: 2, cat:"Mudah", exp: "Kerucut secara definisi memiliki alas lingkaran dan satu titik puncak." },
+            { q: "Garis lurus yang menghubungkan titik puncak dengan titik pada keliling alas kerucut disebut...", o: ["Tinggi", "Jari-jari", "Diameter", "Garis Pelukis"], a: 3, cat:"Mudah", exp: "Garis pelukis (s) adalah garis miring pada selimut kerucut." },
+            { q: "Jaring-jaring kerucut terdiri atas...", o: ["Dua lingkaran dan satu persegi panjang", "Satu lingkaran dan satu segitiga", "Satu lingkaran dan satu juring lingkaran", "Dua lingkaran dan satu juring"], a: 2, cat:"Mudah", exp: "Alas berbentuk lingkaran, dan selimut jika dibuka berbentuk juring lingkaran." },
+            { q: "Rumus luas selimut kerucut yang benar adalah...", o: ["πr²", "πrs", "πr(r+s)", "1/3 πr²t"], a: 1, cat:"Mudah", exp: "Luas selimut (Ls) = π × r × s." },
+            { q: "Hubungan antara jari-jari (r), tinggi (t), dan garis pelukis (s) pada kerucut berlaku rumus...", o: ["s = r + t", "s² = r² + t²", "r² = s² + t²", "t² = s² + r²"], a: 1, cat:"Mudah", exp: "Menggunakan Teorema Pythagoras, s² = r² + t²." },
+            
+            { q: "Sebuah kerucut memiliki jari-jari 7 cm dan tinggi 24 cm. Panjang garis pelukisnya adalah...", o: ["25 cm", "20 cm", "31 cm", "26 cm"], a: 0, cat:"Sedang", exp: "s = √(7² + 24²) = √(49 + 576) = √625 = 25 cm." },
+            { q: "Volume kerucut dengan jari-jari 10 cm dan tinggi 12 cm adalah... (π = 3,14)", o: ["1256 cm³", "3768 cm³", "628 cm³", "2512 cm³"], a: 0, cat:"Sedang", exp: "V = 1/3 × 3.14 × 10² × 12 = 3.14 × 100 × 4 = 1256 cm³." },
+            { q: "Luas alas sebuah kerucut adalah 154 cm². Jika tingginya 12 cm, maka volumenya adalah...", o: ["1848 cm³", "616 cm³", "462 cm³", "1232 cm³"], a: 1, cat:"Sedang", exp: "V = 1/3 × La × t = 1/3 × 154 × 12 = 154 × 4 = 616 cm³." },
+            { q: "Sebuah kerucut memiliki jari-jari 6 cm dan garis pelukis 10 cm. Luas selimut kerucut tersebut adalah... (π = 3,14)", o: ["113,04 cm²", "188,4 cm²", "301,44 cm²", "376,8 cm²"], a: 1, cat:"Sedang", exp: "Ls = πrs = 3.14 × 6 × 10 = 188.4 cm²." },
+            { q: "Volume kerucut adalah sepertiga dari volume tabung apabila...", o: ["Jari-jari kerucut tiga kali jari-jari tabung", "Jari-jari dan tinggi keduanya sama", "Tinggi kerucut sepertiga tinggi tabung", "Luas permukaannya sama"], a: 1, cat:"Sedang", exp: "V_kerucut = 1/3 V_tabung berlaku syarat r dan t nya sama." },
+            
+            { q: "Sebuah es krim cone berisi penuh es krim hingga rata dengan pinggiran cone. Jika diameter cone 7 cm dan tinggi cone 15 cm, volume es krim dalam cone tersebut adalah... (π = 22/7)", o: ["192,5 cm³", "577,5 cm³", "770 cm³", "2310 cm³"], a: 0, cat:"HOTS", exp: "r = d/2 = 3.5 = 7/2. V = 1/3 × 22/7 × (7/2)² × 15 = 1/3 × 22/7 × 49/4 × 15 = 5 × 22/2 × 7/4 = 5 × 11 × 1.75... wait, easier: 1/3 * 22/7 * 3.5 * 3.5 * 15 = 5 * 22/7 * 12.25 = 5 * 22 * 1.75 = 192.5 cm³." },
+            { q: "Topi petani berbentuk kerucut memiliki diameter 40 cm dan tinggi 15 cm. Luas anyaman bambu yang dibutuhkan untuk membuat topi tersebut adalah... (π = 3,14)", o: ["1570 cm²", "1884 cm²", "2826 cm²", "3140 cm²"], a: 0, cat:"HOTS", exp: "d=40 -> r=20. t=15. Cari s = √(20²+15²) = √(400+225) = √625 = 25. Luas topi = Luas Selimut = πrs = 3.14 × 20 × 25 = 3.14 × 500 = 1570 cm²." },
+            { q: "Jika jari-jari alas sebuah kerucut diperbesar 2 kali lipat sedangkan tingginya tetap, maka volume kerucut yang baru akan menjadi...", o: ["2 kali semula", "4 kali semula", "6 kali semula", "8 kali semula"], a: 1, cat:"HOTS", exp: "V ∝ r². Jika r menjadi 2r, maka (2r)² = 4r². Jadi volume menjadi 4 kali lipat." },
+            { q: "Perbandingan jari-jari dua buah kerucut adalah 1 : 2, dan perbandingan tingginya 4 : 1. Perbandingan volume kedua kerucut tersebut adalah...", o: ["1 : 1", "1 : 2", "2 : 1", "4 : 1"], a: 0, cat:"HOTS", exp: "V1 : V2 = (r1² * t1) : (r2² * t2) = (1² * 4) : (2² * 1) = 4 : 4 = 1 : 1." },
+            { q: "Sebuah cetakan nasi tumpeng berbentuk kerucut terpotong bagian atasnya (frustum). Jika siswa hanya belajar kerucut penuh, bagaimana pendekatan penyelesaian mencari volume tumpeng tersebut?", o: ["Menggunakan volume tabung", "Volume kerucut besar dikurangi volume kerucut kecil yang terpotong", "Hanya menghitung luas selimut", "Volume bola dibagi dua"], a: 1, cat:"HOTS", exp: "Volume kerucut terpancung dapat dicari dengan mengurangkan volume kerucut awal (besar) dengan kerucut yang dipotong (kecil) di puncaknya." }
+        ];
+
+        let quizState = { current: 0, score: 0, answers: [], shuffledList: [] };
+
+        function startQuiz() {
+            // Shuffle array safely (Fisher-Yates)
+            quizState.shuffledList = JSON.parse(JSON.stringify(quizData));
+            for (let i = quizState.shuffledList.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [quizState.shuffledList[i], quizState.shuffledList[j]] = [quizState.shuffledList[j], quizState.shuffledList[i]];
+            }
+            
+            // Also shuffle options for each question and keep track of correct answer index
+            quizState.shuffledList.forEach(q => {
+                const originalCorrectText = q.o[q.a];
+                // Shuffle options
+                for (let i = q.o.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [q.o[i], q.o[j]] = [q.o[j], q.o[i]];
+                }
+                // Find new index
+                q.newAnswerIdx = q.o.indexOf(originalCorrectText);
+            });
+
+            quizState.current = 0;
+            quizState.score = 0;
+            quizState.answers = [];
+            
+            document.getElementById('evalStartScreen').classList.add('hidden');
+            document.getElementById('evalQuizScreen').classList.remove('hidden');
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            const q = quizState.shuffledList[quizState.current];
+            document.getElementById('qCurrent').innerText = quizState.current + 1;
+            document.getElementById('qCategory').innerText = q.cat;
+            
+            let color = 'bg-blue-100 text-blue-800';
+            if(q.cat==='Sedang') color = 'bg-yellow-100 text-yellow-800';
+            if(q.cat==='HOTS') color = 'bg-red-100 text-red-800';
+            document.getElementById('qCategory').className = `px-2 py-1 rounded text-xs font-bold ${color}`;
+            
+            document.getElementById('quizProgress').style.width = `${((quizState.current) / 15) * 100}%`;
+            
+            document.getElementById('qText').innerHTML = q.q;
+            
+            const optsContainer = document.getElementById('qOptions');
+            optsContainer.innerHTML = '';
+            
+            q.o.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full text-left p-4 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-primary hover:bg-indigo-50 dark:hover:bg-slate-800 transition font-medium';
+                btn.innerHTML = `${String.fromCharCode(65 + idx)}. ${opt}`;
+                btn.onclick = () => selectOption(idx, btn);
+                optsContainer.appendChild(btn);
+            });
+            
+            document.getElementById('qFeedback').classList.add('hidden');
+            document.getElementById('btnNextQuestion').classList.add('hidden');
+        }
+
+        function selectOption(selectedIdx, btnEl) {
+            // Disable all buttons
+            const btns = document.getElementById('qOptions').querySelectorAll('button');
+            btns.forEach(b => { b.disabled = true; b.classList.remove('hover:border-primary', 'hover:bg-indigo-50'); });
+            
+            const q = quizState.shuffledList[quizState.current];
+            const isCorrect = selectedIdx === q.newAnswerIdx;
+            
+            if(isCorrect) {
+                quizState.score++;
+                btnEl.classList.add('border-green-500', 'bg-green-50', 'dark:bg-green-900/30', 'text-green-800', 'dark:text-green-200');
+                showFeedback(true, q.exp);
+                playSuccessSound();
+            } else {
+                btnEl.classList.add('border-red-500', 'bg-red-50', 'dark:bg-red-900/30', 'text-red-800', 'dark:text-red-200');
+                // highlight correct
+                btns[q.newAnswerIdx].classList.add('border-green-500', 'bg-green-50', 'dark:bg-green-900/30');
+                showFeedback(false, q.exp);
+            }
+            
+            document.getElementById('btnNextQuestion').classList.remove('hidden');
+        }
+
+        function showFeedback(isCorrect, exp) {
+            const fb = document.getElementById('qFeedback');
+            const title = document.getElementById('qFeedbackTitle');
+            const text = document.getElementById('qFeedbackText');
+            
+            fb.classList.remove('hidden', 'bg-green-100', 'border-green-300', 'text-green-800', 'bg-red-100', 'border-red-300', 'text-red-800');
+            
+            if(isCorrect) {
+                fb.classList.add('bg-green-100', 'border-green-300', 'text-green-800', 'dark:bg-green-900', 'dark:border-green-600', 'dark:text-green-100');
+                title.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Benar!';
+            } else {
+                fb.classList.add('bg-red-100', 'border-red-300', 'text-red-800', 'dark:bg-red-900', 'dark:border-red-600', 'dark:text-red-100');
+                title.innerHTML = '<i class="fas fa-times-circle mr-2"></i> Kurang Tepat!';
+            }
+            text.innerHTML = `<strong>Pembahasan:</strong> ${exp}`;
+        }
+
+        function nextQuestion() {
+            quizState.current++;
+            if(quizState.current < 15) {
+                renderQuestion();
+            } else {
+                finishQuiz();
+            }
+        }
+
+        function finishQuiz() {
+            markProgress('evaluasi');
+            
+            const finalScore = Math.round((quizState.score / 15) * 100);
+            document.getElementById('resScore').innerText = finalScore;
+            document.getElementById('resCorrect').innerText = quizState.score;
+            document.getElementById('resWrong').innerText = 15 - quizState.score;
+            
+            let cat = "", icon = "", rec = "";
+            if(finalScore >= 90) { cat = "Sangat Baik"; icon = "🏆"; rec = "Luar biasa! Pemahamanmu tentang kerucut sudah sangat mantap. Kamu siap melanjutkan ke materi geometri ruang selanjutnya."; }
+            else if (finalScore >= 80) { cat = "Baik"; icon = "⭐"; rec = "Kerja bagus! Sedikit lagi mencapai sempurna. Coba review kembali soal HOTS untuk mempertajam analisis."; }
+            else if (finalScore >= 70) { cat = "Cukup"; icon = "👍"; rec = "Kamu sudah memahami dasar-dasarnya. Disarankan untuk memutar kembali video pembelajaran dan mencoba simulasi sekali lagi."; }
+            else { cat = "Perlu Belajar Kembali"; icon = "💪"; rec = "Jangan menyerah! Buka kembali menu Materi dan pelajari perlahan. Gunakan fitur Chatbot AI jika ada bagian rumus yang membingungkanmu."; }
+            
+            document.getElementById('resCategory').innerText = cat;
+            document.getElementById('resultIcon').innerText = icon;
+            document.getElementById('resultTitle').innerText = finalScore >= 70 ? "Selamat!" : "Terus Semangat!";
+            document.getElementById('resRecommendation').innerHTML = `<strong>Rekomendasi:</strong> ${rec}`;
+            
+            document.getElementById('certScoreDisplay').innerText = finalScore;
+            
+            // Set date
+            const today = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('certDate').innerText = today.toLocaleDateString('id-ID', options);
+
+            navigateTo('hasil');
+            document.getElementById('evalQuizScreen').classList.add('hidden');
+            document.getElementById('evalStartScreen').classList.remove('hidden'); // Reset for next time
+        }
+
+        // --- 9. CERTIFICATE (html2pdf) ---
+        function generatePDF() {
+            const name = document.getElementById('certName').value.trim();
+            if(!name) {
+                showToast("Silakan masukkan namamu terlebih dahulu.");
+                document.getElementById('certName').focus();
+                return;
+            }
+            
+            document.getElementById('certNameDisplay').innerText = name.toUpperCase();
+            const element = document.getElementById('certificateTemplate');
+            element.style.display = 'block'; // Make it visible for html2pdf
+            
+            const opt = {
+                margin:       10,
+                filename:     `Sertifikat_Kerucut_${name.replace(/\s+/g, '_')}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, logging: false },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                element.style.display = 'none'; // Hide again
+                showToast("Sertifikat berhasil diunduh!");
+                markProgress('hasil');
+            });
+        }
+
+        // Run Init on Load
+        window.onload = initApp;
+
+    </script>
+</body>
+</html>
